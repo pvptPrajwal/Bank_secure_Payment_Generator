@@ -51,7 +51,11 @@ class AppController:
 
     def _on_login(self, user: dict):
         self.current_window.close()
-        if user["role"] == "Administrator":
+        role = user["role"]
+        if role == "MainAdmin":
+            from ui.main_admin_dashboard import MainAdminDashboard
+            self.current_window = MainAdminDashboard(on_logout=self._on_logout)
+        elif role == "Admin":
             self.current_window = AdminDashboard(on_logout=self._on_logout)
         else:
             self.current_window = UserDashboard(on_logout=self._on_logout)

@@ -1,18 +1,26 @@
 """
-config.py — Loads Supabase credentials from the .env file.
-Uses the low-privilege PUBLISHABLE key (not the secret key).
+config.py — Loads Supabase credentials.
+Works both as Python script AND as PyInstaller .exe with bundled .env.
 """
 import os
 import sys
 from dotenv import load_dotenv
 
-# Works correctly both as a plain Python script AND as a PyInstaller .exe
-if getattr(sys, "frozen", False):
-    _base = os.path.dirname(sys.executable)
-else:
-    _base = os.path.dirname(os.path.abspath(__file__))
 
-load_dotenv(os.path.join(_base, ".env"))
+def _find_env():
+    # Running as PyInstaller .exe
+    if getattr(sys, "frozen", False):
+        # First try next to the .exe (allows override)
+        exe_dir = os.path.dirname(sys.executable)
+        if os.path.exists(os.path.join(exe_dir, ".env")):
+            return os.path.join(exe_dir, ".env")
+        # Fall back to bundled .env inside the .exe
+        return os.path.join(sys._MEIPASS, ".env")
+    # Running as normal Python script
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+
+
+load_dotenv(_find_env())
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip()
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "").strip()
@@ -26,8 +34,5 @@ class ConfigError(Exception):
 def require_configured():
     if not IS_CONFIGURED:
         raise ConfigError(
-            "Supabase is not configured.\n"
-            "Create a .env file next to the application with:\n"
-            "  SUPABASE_URL=https://your-project.supabase.co\n"
-            "  SUPABASE_KEY=sb_publishable_..."
+            "Supabase is not configured. Contact your administrator."
         )

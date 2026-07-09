@@ -44,7 +44,7 @@ class UserDashboard(QWidget):
     def _header(self):
         bar = QFrame(); bar.setObjectName("Card")
         row = QHBoxLayout(bar)
-        lbl = QLabel(f"Welcome, {session.username()}  (User)")
+        lbl = QLabel(f"Welcome, {session.username()}  — User, {session.company_name()}")
         lbl.setObjectName("Section"); row.addWidget(lbl); row.addStretch()
         for text, slot in [("Settings", self._settings), ("About", self._about), ("Logout", self._logout)]:
             b = QPushButton(text); b.setObjectName("Gray"); b.clicked.connect(slot); row.addWidget(b)

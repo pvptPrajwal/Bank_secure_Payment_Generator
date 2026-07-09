@@ -29,8 +29,8 @@ def check_policy(pw: str) -> tuple:
 
 
 def main():
-    print("=== Bank Payment File Generator — Initial Admin Setup ===\n")
-    username = input("Choose an admin username [admin]: ").strip() or "admin"
+    print("=== Bank Payment File Generator — Main Admin Setup (Software Owner) ===\n")
+    username = input("Choose the MAIN ADMIN username [admin]: ").strip() or "admin"
 
     while True:
         password = input("Choose a strong admin password: ").strip()
@@ -40,7 +40,7 @@ def main():
         print(f"  ✗ {msg}  Try again.\n")
 
     try:
-        api_client.bootstrap_first_admin(username, password)
+        api_client.bootstrap_main_admin(username, password)
     except ApiError as e:
         print(f"\n✗ Error: {e}")
         if "already exists" in str(e):
@@ -48,7 +48,7 @@ def main():
             print("Log in with that account, then use Admin Dashboard → Create User for more accounts.")
         return
 
-    print(f"\n✓ Administrator account '{username}' created successfully.")
+    print(f"\n✓ Main Admin account '{username}' created successfully.")
     print("Run  python main.py  and log in with these credentials.")
 
 

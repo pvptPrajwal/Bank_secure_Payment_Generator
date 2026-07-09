@@ -1,5 +1,5 @@
 import os, sys
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QLineEdit,
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
                                QPushButton, QFrame, QMessageBox)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QPixmap
@@ -55,10 +55,26 @@ class LoginWindow(QWidget):
         layout.addWidget(self.username)
 
         layout.addWidget(QLabel("Password"))
-        self.password = QLineEdit(); self.password.setPlaceholderText("Enter password")
+        pw_row = QHBoxLayout()
+        pw_row.setContentsMargins(0, 0, 0, 0)
+        pw_row.setSpacing(4)
+        self.password = QLineEdit()
+        self.password.setPlaceholderText("Enter password")
         self.password.setEchoMode(QLineEdit.Password)
         self.password.returnPressed.connect(self._login)
-        layout.addWidget(self.password)
+        pw_row.addWidget(self.password)
+
+        self.show_pw_btn = QPushButton("👁")
+        self.show_pw_btn.setObjectName("Gray")
+        self.show_pw_btn.setFixedWidth(38)
+        self.show_pw_btn.setCheckable(True)
+        self.show_pw_btn.setToolTip("Show / hide password")
+        self.show_pw_btn.toggled.connect(self._toggle_password)
+        pw_row.addWidget(self.show_pw_btn)
+
+        pw_container = QWidget()
+        pw_container.setLayout(pw_row)
+        layout.addWidget(pw_container)
 
         self.error = QLabel("")
         self.error.setStyleSheet("color: #8C1D1D; font-weight: 500;")
@@ -75,6 +91,15 @@ class LoginWindow(QWidget):
         layout.addWidget(ver)
 
         outer.addWidget(card, alignment=Qt.AlignCenter)
+
+    def _toggle_password(self, checked: bool):
+        """Show password when eye button pressed, mask when released."""
+        if checked:
+            self.password.setEchoMode(QLineEdit.Normal)
+            self.show_pw_btn.setText("🙈")
+        else:
+            self.password.setEchoMode(QLineEdit.Password)
+            self.show_pw_btn.setText("👁")
 
     def _login(self):
         u, p = self.username.text().strip(), self.password.text()

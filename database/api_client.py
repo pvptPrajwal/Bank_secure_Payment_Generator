@@ -1,10 +1,8 @@
 """
-database/api_client.py
------------------------
-The ONLY module that makes network calls.
-Uses the publishable key + SECURITY DEFINER Postgres functions.
-Every privileged call re-verifies username + password server-side.
-Master/payment file contents NEVER pass through here.
+database/api_client.py — Multi-company version.
+The ONLY module that makes network calls. Uses publishable key +
+SECURITY DEFINER RPC functions. Every privileged call re-verifies
+credentials server-side. Company isolation is enforced server-side.
 """
 import socket
 from supabase import create_client, Client
@@ -24,7 +22,7 @@ def get_client() -> Client:
         try:
             _client = create_client(config.SUPABASE_URL, config.SUPABASE_KEY)
         except Exception as e:
-            raise ApiError(f"Could not connect to Supabase: {e}")
+            raise ApiError(f"Could not connect: {e}")
     return _client
 
 
@@ -36,141 +34,174 @@ def machine_name() -> str:
 
 
 def check_connection():
-    """Startup connectivity check. Expects 'Invalid credentials' response — that means the server is up."""
     try:
         _call("get_latest_master_hash", {"p_username": "__ping__", "p_password": "__ping__"})
     except ApiError as e:
         if "Invalid credentials" in str(e):
-            return   # Server is reachable and responding correctly
+            return
         raise
 
 
 def _call(fn: str, params: dict) -> dict:
-    """Call a Postgres RPC function. Raises ApiError on failure."""
     try:
         res = get_client().rpc(fn, params).execute()
     except Exception as e:
         raise ApiError(f"Could not reach the online server. Check your internet connection.\nDetails: {e}")
-
     data = res.data
     if isinstance(data, list):
         data = data[0] if data else {}
     if not isinstance(data, dict):
-        raise ApiError(f"Unexpected response from server ({fn}).")
+        raise ApiError(f"Unexpected response ({fn}).")
     if not data.get("success", False):
         raise ApiError(data.get("error", "Request rejected by server."))
     return data
 
 
-# ── Authentication ──────────────────────────────────────────────────────────
+# ── Common (all roles) ───────────────────────────────────────────────────────
 
 def login(username: str, password: str) -> dict:
     return _call("login_user", {
-        "p_username": username,
-        "p_password": password,
+        "p_username": username, "p_password": password,
         "p_machine": machine_name(),
     })["user"]
 
 
 def change_own_password(username: str, old_pw: str, new_pw: str):
     _call("change_own_password", {
-        "p_username": username,
-        "p_old_password": old_pw,
-        "p_new_password": new_pw,
-        "p_machine": machine_name(),
+        "p_username": username, "p_old_password": old_pw,
+        "p_new_password": new_pw, "p_machine": machine_name(),
     })
 
-
-# ── Admin: user management ───────────────────────────────────────────────────
-
-def admin_create_user(adm_u: str, adm_p: str, new_u: str, new_p: str, role: str) -> dict:
-    return _call("admin_create_user", {
-        "p_admin_username": adm_u, "p_admin_password": adm_p,
-        "p_new_username": new_u, "p_new_password": new_p,
-        "p_role": role, "p_machine": machine_name(),
-    })["user"]
-
-
-def admin_set_active(adm_u: str, adm_p: str, target: str, active: bool) -> dict:
-    return _call("admin_set_active", {
-        "p_admin_username": adm_u, "p_admin_password": adm_p,
-        "p_target_username": target, "p_active": active,
-        "p_machine": machine_name(),
-    })["user"]
-
-
-def admin_delete_user(adm_u: str, adm_p: str, target: str):
-    _call("admin_delete_user", {
-        "p_admin_username": adm_u, "p_admin_password": adm_p,
-        "p_target_username": target, "p_machine": machine_name(),
-    })
-
-
-def admin_reset_password(adm_u: str, adm_p: str, target: str, new_pw: str):
-    _call("admin_reset_password", {
-        "p_admin_username": adm_u, "p_admin_password": adm_p,
-        "p_target_username": target, "p_new_password": new_pw,
-        "p_machine": machine_name(),
-    })
-
-
-def admin_list_users(adm_u: str, adm_p: str) -> list:
-    return _call("admin_list_users", {
-        "p_admin_username": adm_u,
-        "p_admin_password": adm_p,
-    })["users"]
-
-
-# ── Master hash ──────────────────────────────────────────────────────────────
-
-def admin_upload_master_hash(adm_u: str, adm_p: str, hash_value: str) -> dict:
-    return _call("admin_upload_master_hash", {
-        "p_admin_username": adm_u, "p_admin_password": adm_p,
-        "p_hash_value": hash_value, "p_machine": machine_name(),
-    })["hash"]
-
-
-def get_latest_master_hash(username: str, password: str):
-    return _call("get_latest_master_hash", {
-        "p_username": username,
-        "p_password": password,
-    }).get("hash")
-
-
-def admin_list_master_hash_versions(adm_u: str, adm_p: str) -> list:
-    return _call("admin_list_master_hash_versions", {
-        "p_admin_username": adm_u,
-        "p_admin_password": adm_p,
-    })["versions"]
-
-
-# ── Audit log ────────────────────────────────────────────────────────────────
 
 def log_event(username: str, action: str, description: str):
     try:
         _call("log_event", {
-            "p_username": username,
-            "p_action": action,
-            "p_description": description,
-            "p_machine": machine_name(),
+            "p_username": username, "p_action": action,
+            "p_description": description, "p_machine": machine_name(),
         })
     except ApiError:
-        pass   # logging failure must never crash the app
+        pass
 
 
-def admin_list_audit_logs(adm_u: str, adm_p: str, limit: int = 500) -> list:
-    return _call("admin_list_audit_logs", {
-        "p_admin_username": adm_u,
-        "p_admin_password": adm_p,
-        "p_limit": limit,
+# ── Main Admin ───────────────────────────────────────────────────────────────
+
+def main_create_company(mu, mp, company_name, admin_user, admin_pw) -> dict:
+    return _call("main_create_company", {
+        "p_main_username": mu, "p_main_password": mp,
+        "p_company_name": company_name,
+        "p_admin_username": admin_user, "p_admin_password": admin_pw,
+        "p_machine": machine_name(),
+    })["company"]
+
+
+def main_list_companies(mu, mp) -> list:
+    return _call("main_list_companies", {
+        "p_main_username": mu, "p_main_password": mp,
+    })["companies"]
+
+
+def main_set_company_active(mu, mp, company_id: int, active: bool):
+    _call("main_set_company_active", {
+        "p_main_username": mu, "p_main_password": mp,
+        "p_company_id": company_id, "p_active": active,
+        "p_machine": machine_name(),
+    })
+
+
+def main_create_company_admin(mu, mp, company_id: int, new_user, new_pw):
+    _call("main_create_company_admin", {
+        "p_main_username": mu, "p_main_password": mp,
+        "p_company_id": company_id,
+        "p_new_username": new_user, "p_new_password": new_pw,
+        "p_machine": machine_name(),
+    })
+
+
+def main_list_admins(mu, mp) -> list:
+    return _call("main_list_admins", {
+        "p_main_username": mu, "p_main_password": mp,
+    })["admins"]
+
+
+def main_manage_admin(mu, mp, target: str, action: str, new_password: str = None):
+    _call("main_manage_admin", {
+        "p_main_username": mu, "p_main_password": mp,
+        "p_target_username": target, "p_action": action,
+        "p_new_password": new_password, "p_machine": machine_name(),
+    })
+
+
+def main_list_audit_logs(mu, mp, from_date=None, to_date=None, company_id=None, limit: int = 500) -> list:
+    return _call("main_list_audit_logs", {
+        "p_main_username": mu, "p_main_password": mp,
+        "p_from_date": from_date, "p_to_date": to_date,
+        "p_company_id": company_id, "p_limit": limit,
     })["logs"]
 
 
-# ── First-time setup ─────────────────────────────────────────────────────────
+def main_purge_old_logs(mu, mp, older_than_days: int) -> int:
+    d = _call("main_purge_old_logs", {
+        "p_main_username": mu, "p_main_password": mp,
+        "p_older_than_days": older_than_days,
+        "p_machine": machine_name(),
+    })
+    return d.get("deleted_count", 0)
 
-def bootstrap_first_admin(username: str, password: str):
-    """Only succeeds once — when the Users table is completely empty."""
-    _call("bootstrap_first_admin", {
-        "p_username": username,
-        "p_password": password,
+
+# ── Company Admin ────────────────────────────────────────────────────────────
+
+def admin_create_user(au, ap, new_user, new_pw):
+    _call("admin_create_user", {
+        "p_admin_username": au, "p_admin_password": ap,
+        "p_new_username": new_user, "p_new_password": new_pw,
+        "p_machine": machine_name(),
+    })
+
+
+def admin_list_users(au, ap) -> list:
+    return _call("admin_list_users", {
+        "p_admin_username": au, "p_admin_password": ap,
+    })["users"]
+
+
+def admin_manage_user(au, ap, target: str, action: str, new_password: str = None):
+    _call("admin_manage_user", {
+        "p_admin_username": au, "p_admin_password": ap,
+        "p_target_username": target, "p_action": action,
+        "p_new_password": new_password, "p_machine": machine_name(),
+    })
+
+
+def admin_upload_master_hash(au, ap, hash_value: str) -> dict:
+    return _call("admin_upload_master_hash", {
+        "p_admin_username": au, "p_admin_password": ap,
+        "p_hash_value": hash_value, "p_machine": machine_name(),
+    })["hash"]
+
+
+def admin_list_master_hash_versions(au, ap) -> list:
+    return _call("admin_list_master_hash_versions", {
+        "p_admin_username": au, "p_admin_password": ap,
+    })["versions"]
+
+
+def admin_list_audit_logs(au, ap, limit: int = 500) -> list:
+    return _call("admin_list_audit_logs", {
+        "p_admin_username": au, "p_admin_password": ap, "p_limit": limit,
+    })["logs"]
+
+
+# ── User / Admin ─────────────────────────────────────────────────────────────
+
+def get_latest_master_hash(username: str, password: str):
+    return _call("get_latest_master_hash", {
+        "p_username": username, "p_password": password,
+    }).get("hash")
+
+
+# ── Setup ────────────────────────────────────────────────────────────────────
+
+def bootstrap_main_admin(username: str, password: str):
+    _call("bootstrap_main_admin", {
+        "p_username": username, "p_password": password,
     })

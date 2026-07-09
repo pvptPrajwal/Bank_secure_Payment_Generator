@@ -50,6 +50,14 @@ class SessionManager:
     def username(self) -> str:
         return self.current_user["username"] if self.current_user else ""
 
+    def company_name(self) -> str:
+        if self.current_user:
+            return self.current_user.get("company_name") or ""
+        return ""
+
+    def role(self) -> str:
+        return self.current_user["role"] if self.current_user else ""
+
     def password(self) -> str:
         return self._password or ""
 
