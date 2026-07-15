@@ -2,7 +2,7 @@
 
 
 
-\*\*Secure \& Efficient Payment File Generation\*\*
+*\*Secure \& Efficient Payment File Generation\*\*
 
 
 
@@ -42,17 +42,17 @@ A professional desktop application for generating bank-ready payment files with 
 
 
 
-\## Tech Stack
+## Tech Stack
 
-\- Python 3.12+
+- Python 3.12+
 
-\- PySide6 (GUI)
+- PySide6 (GUI)
 
-\- Supabase (PostgreSQL backend)
+- Supabase (PostgreSQL backend)
 
-\- Pandas + OpenPyXL
+- Pandas + OpenPyXL
 
-\- PyInstaller (executable)
+- PyInstaller (executable)
 
 
 
