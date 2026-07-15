@@ -1,4 +1,4 @@
-\# TiMoCo Advisors — Bank Payment File Generator
+\# TiMoCo Advisors — Bank Payment File Generator(v 2.0)
 
 
 
@@ -34,7 +34,7 @@ A professional desktop application for generating bank-ready payment files with 
 
 |-----------|--------------|
 
-| Login \& user management | Online (Supabase) |
+| Login (Maste Admin)  --> Master Admin create Admin(Admin) --> Admin create User |
 
 | Master file hash verification | Online (hash only) |
 
@@ -56,15 +56,6 @@ A professional desktop application for generating bank-ready payment files with 
 
 
 
-\## Setup
-
-1\. Copy `.env.example` to `.env` and fill in your Supabase credentials
-
-2\. Run `pip install -r requirements.txt`
-
-3\. Run `python scripts\\create\_initial\_admin.py`
-
-4\. Run `python main.py`
 
 ## Security
 - Publishable key only — no secret key in the app
@@ -73,5 +64,21 @@ A professional desktop application for generating bank-ready payment files with 
 - 15-minute idle session timeout
 
 
-\## Build EXE
+\## How to run 
 
+0\. Copy `.env.example` to `.env` and fill in your Supabase credentials
+
+1\. Creat virtual environment
+\- python -m venv venv
+
+2\. Activate virtual environment
+\- venv\Scripts\activate
+
+3\. Specify and install Python
+\-pip install -r requirements.txt
+
+4\. Set Pass 
+\- python scripts\create_initial_admin.py
+
+5\. Build EXE
+\- python -m PyInstaller build_exe.spec
