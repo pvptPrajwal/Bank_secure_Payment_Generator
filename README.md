@@ -1,4 +1,4 @@
-\# TiMoCo Advisors — Bank Payment File Generator(v 2.0)
+# TiMoCo Advisors — Bank Payment File Generator(v 2.0)
 
 
 
@@ -10,7 +10,7 @@ A professional desktop application for generating bank-ready payment files with 
 
 
 
-\## Features
+## Features
 
 \- 🔐 Secure online authentication (Supabase)
 
@@ -28,7 +28,7 @@ A professional desktop application for generating bank-ready payment files with 
 
 
 
-\## Architecture
+## Architecture
 
 | Component | Where it runs |
 
@@ -64,7 +64,7 @@ A professional desktop application for generating bank-ready payment files with 
 - 15-minute idle session timeout
 
 
-\## How to run 
+## How to run 
 
 0\. Copy `.env.example` to `.env` and fill in your Supabase credentials
 
